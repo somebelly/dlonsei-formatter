@@ -120,6 +120,10 @@ def get_metadata(rjcode):
 def tag(file):
     rjcode = get_rjcode(file)
     metadata = get_metadata(rjcode)
+
+    if not metadata:
+        return
+
     ext = os.path.splitext(file)[1].lower()
     audio = mutagen.File(file, easy=True)
 
@@ -131,7 +135,8 @@ def tag(file):
         if tags[k] in metadata:
             audio[k] = metadata[tags[k]]
     audio['Title'] = os.path.split(os.path.splitext(file)[0])[1]
-    audio['Year'] = metadata[tags['Date']][:4]
+    if tags['Date'] in metadata:
+        audio['Year'] = metadata[tags['Date']][:4]
 
     audio.save()
 
