@@ -4,6 +4,7 @@ Format a folder with RJcode:
 - Tag `'.flac'` and `'.mp3'` files using metadata from dlsite;
 - Improve folder name readability.
 
+
 ## Dependences
 
 [tqdm](https://github.com/tqdm/tqdm)
@@ -15,6 +16,7 @@ Format a folder with RJcode:
 [requests-html](https://github.com/psf/requests-html)
 
 [BeautifulSoup](https://www.crummy.com/software/BeautifulSoup/)
+
 
 ## Usage
 
@@ -35,8 +37,11 @@ or indicate some folders on your own:
 dlft -i <folder1 folder2 ...>
 ```
 
+
 ## References
 
 [doujin_tagger](https://github.com/maybeRainH/doujin_tagger)
+
 [Doujin_Voice_Renamer](https://github.com/Watanuki-Kimihiro/Doujin_Voice_Renamer)
+
 [audio-converter](https://github.com/somebelly/audio-converter)
