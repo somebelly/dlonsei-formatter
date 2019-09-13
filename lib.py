@@ -223,13 +223,14 @@ def format(dir=os.getcwd(), convert=True):
                 acflac(f)
                 now += 1
 
-        to_tag = find_audio_files_in(folder)
-        now = 0
-        for f in to_tag:
-            bar.set_postfix_str('Tagging...' + str(now) + '/' +
-                                str(len(to_tag)))
-            tag(f)
-            now += 1
+        if get_metadata(rjcode):
+            to_tag = find_audio_files_in(folder)
+            now = 0
+            for f in to_tag:
+                bar.set_postfix_str('Tagging...' + str(now) + '/' +
+                                    str(len(to_tag)))
+                tag(f)
+                now += 1
 
         folder_name = get_formatted_name_of(rjcode)
         shutil.move(folder,
