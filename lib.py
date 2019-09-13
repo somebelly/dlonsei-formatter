@@ -150,6 +150,8 @@ def find_audio_files_in(dir, exts=['.mp3', '.flac']):
 
 
 def get_folders_with_rjcode_in(dir):
+    if get_rjcode(dir):
+        return [dir]
     return [
         os.path.join(root, folder) for root, dirs, files in os.walk(dir)
         for folder in dirs if get_rjcode(folder)
