@@ -163,13 +163,13 @@ def get_cover(rjcode):
     try:
         return HTMLSession().get(metadata['img']).content
     except:
-        return ''
+        return b''
 
 
-def cover(folder):
-    rjcode = get_rjcode(folder)
+def cover(folder, img=b''):
     if not has_cover(folder):
-        img = get_cover(rjcode)
+        if not img:
+            img = get_cover(get_rjcode(folder))
         open(os.path.join(folder, 'cover.jpg'), 'wb').write(img)
 
 
@@ -279,12 +279,13 @@ def format(dir=os.getcwd(), convert=True, save_cover=True, force=False):
 
         if save_cover:
             to_cover = find_folders_with_audio_files_in(folder)
-            now = 0
+            img = get_cover(rjcode)
+            # now = 0
             for f in to_cover:
-                bar.set_postfix_str('Saving cover...' + str(now) + '/' +
-                                    str(len(to_cover)))
-                cover(f)
-                now += 1
+                # bar.set_postfix_str('Saving cover...' + str(now) + '/' +
+                #                     str(len(to_cover)))
+                cover(f, img)
+                # now += 1
 
         folder_name = get_formatted_name_of(rjcode)
         shutil.move(folder,
