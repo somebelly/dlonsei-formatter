@@ -2,6 +2,7 @@
 Format a folder with RJcode:
 - Convert `'.wav'` files to `'.flac'`;
 - Tag `'.flac'` and `'.mp3'` files using metadata from dlsite;
+- Save `cover.jpg` in all subfolders which have audio files;
 - Improve folder name readability.
 
 
