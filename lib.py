@@ -76,6 +76,14 @@ def acflac(file, compression_level=5, replace=True):
         print(e)
 
 
+def got_metadata(rjcode):
+    with open(local_data) as f:
+        data = json.load(f)
+    if rjcode in data:
+        return True
+    return False
+
+
 def get_metadata(rjcode):
     with open(local_data) as f:
         data = json.load(f)
@@ -141,6 +149,30 @@ def tag(file):
     audio.save()
 
 
+def has_cover(folder):
+    try:
+        if os.path.exists(os.path.join(folder, 'cover.jpg')):
+            return True
+    except:
+        pass
+    return False
+
+
+def get_cover(rjcode):
+    metadata = get_metadata(rjcode)
+    try:
+        return HTMLSession().get(metadata['img']).content
+    except:
+        return ''
+
+
+def cover(folder):
+    rjcode = get_rjcode(folder)
+    if not has_cover(folder):
+        img = get_cover(rjcode)
+        open(os.path.join(folder, 'cover.jpg'), 'wb').write(img)
+
+
 def find_audio_files_in(dir, exts=['.mp3', '.flac']):
     return [
         os.path.join(root, file) for ext in exts
@@ -149,13 +181,21 @@ def find_audio_files_in(dir, exts=['.mp3', '.flac']):
     ]
 
 
-def get_folders_with_rjcode_in(dir):
+def find_folders_with_rjcode_in(dir):
     if get_rjcode(dir):
         return [dir]
     return [
         os.path.join(root, folder) for root, dirs, files in os.walk(dir)
         for folder in dirs if get_rjcode(folder)
     ]
+
+
+def find_folders_with_audio_files_in(dir, exts=['.mp3', '.flac']):
+    return list(
+        dict.fromkeys([
+            os.path.split(file)[0]
+            for file in find_audio_files_in(dir, exts=exts)
+        ]))
 
 
 def format_title(title):
@@ -205,8 +245,10 @@ def get_formatted_name_of(rjcode,
     return temp.strip()
 
 
-def format(dir=os.getcwd(), convert=True):
-    folders = get_folders_with_rjcode_in(dir)
+def format(dir=os.getcwd(), convert=True, save_cover=True, force=False):
+    print('Indexing...', end='')
+    folders = find_folders_with_rjcode_in(dir)
+    print('Finished.')
 
     bar = tqdm(folders,
                bar_format='{l_bar}{bar}{{{n_fmt}/{total_fmt}{postfix}}}',
@@ -225,13 +267,23 @@ def format(dir=os.getcwd(), convert=True):
                 acflac(f)
                 now += 1
 
-        if get_metadata(rjcode):
-            to_tag = find_audio_files_in(folder)
+        if force or not got_metadata(rjcode):
+            if get_metadata(rjcode):
+                to_tag = find_audio_files_in(folder)
+                now = 0
+                for f in to_tag:
+                    bar.set_postfix_str('Tagging...' + str(now) + '/' +
+                                        str(len(to_tag)))
+                    tag(f)
+                    now += 1
+
+        if save_cover:
+            to_cover = find_folders_with_audio_files_in(folder)
             now = 0
-            for f in to_tag:
-                bar.set_postfix_str('Tagging...' + str(now) + '/' +
-                                    str(len(to_tag)))
-                tag(f)
+            for f in to_cover:
+                bar.set_postfix_str('Saving cover...' + str(now) + '/' +
+                                    str(len(to_cover)))
+                cover(f)
                 now += 1
 
         folder_name = get_formatted_name_of(rjcode)

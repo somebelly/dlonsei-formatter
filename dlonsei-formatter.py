@@ -13,6 +13,12 @@ def parse_cli():
             nargs='+',
         )
         parser.add_argument(
+            "-f",
+            '--force',
+            dest='force',
+            action='store_true',
+        )
+        parser.add_argument(
             "-cl",
             '--compression_level',
             dest='level',
@@ -20,19 +26,20 @@ def parse_cli():
             choices=range(13),
         )
         parser.add_argument(
-            '-r',
-            '--replace',
-            dest='replace',
-            action='store_true',
-        )
-        parser.add_argument(
-            '-nr',
-            '--not-replace',
-            dest='replace',
+            '-nc',
+            '--not_convert',
+            dest='convert',
             action='store_false',
         )
-        parser.set_defaults(inplace=True)
-        parser.set_defaults(replace=False)
+        parser.add_argument(
+            '-nsc',
+            '--not_save_cover',
+            dest='save_cover',
+            action='store_false',
+        )
+        parser.set_defaults(force=False)
+        parser.set_defaults(convert=True)
+        parser.set_defaults(save_cover=True)
         parser.set_defaults(level=5)
         return parser.parse_args()
     except argparse.ArgumentError as err:
@@ -45,6 +52,9 @@ args = parse_cli()
 init()
 if args.input:
     for dir in args.input:
-        format(dir)
+        format(dir,
+               force=args.force,
+               convert=args.convert,
+               save_cover=args.save_cover)
 else:
-    format()
+    format(force=args.force, convert=args.convert, save_cover=args.save_cover)
