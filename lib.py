@@ -8,6 +8,7 @@ from requests_html import HTMLSession
 from bs4 import BeautifulSoup
 import json
 from tqdm import tqdm
+from pathvalidate import sanitize_filename, sanitize_filepath
 
 local_data = os.path.expanduser('~/.dlonsei_data.json')
 
@@ -69,9 +70,9 @@ def acflac(file, compression_level=5, replace=True):
         title = os.path.splitext(file)[0]
         if replace:
             os.remove(file)
-        while os.path.exists(title + '.flac'):
-            title += '_flac'
-        shutil.move('.Noname.flac', title + '.flac')
+        # while os.path.exists(title + '.flac'):
+        #     title += '_flac'
+        shutil.move('.Noname.flac', sanitize_filename(title + '.flac'))
     except Exception as e:
         print(e)
 
@@ -288,6 +289,8 @@ def format(dir=os.getcwd(), convert=True, save_cover=True, force=False):
                 # now += 1
 
         folder_name = get_formatted_name_of(rjcode)
-        shutil.move(folder,
-                    os.path.join(os.path.split(folder)[0], folder_name))
+        shutil.move(
+            folder,
+            sanitize_filepath(
+                os.path.join(os.path.split(folder)[0], folder_name)))
         bar.set_postfix_str('Finished.')
