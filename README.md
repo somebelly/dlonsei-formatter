@@ -18,6 +18,12 @@ Format a folder with RJcode:
 
 [BeautifulSoup](https://www.crummy.com/software/BeautifulSoup/)
 
+[pathvalidate](https://github.com/thombashi/pathvalidate)
+
+```
+pip install tqdm ffmpeg-python mutagen requests-html beautifulsoup4 pathvalidate
+```
+
 
 ## Usage
 
