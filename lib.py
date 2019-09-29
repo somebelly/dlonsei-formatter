@@ -120,7 +120,7 @@ def get_metadata(rjcode):
         data = json.load(f)
         data[rjcode] = metadata
         f.seek(0)
-        json.dump(data, f, indent=4)
+        json.dump(data, f, indent=4, ensure_ascii=False)
         f.truncate()
 
     return metadata
@@ -247,7 +247,7 @@ def get_formatted_name_of(rjcode,
 
 
 def format(dir=os.getcwd(), convert=True, save_cover=True, force=False):
-    print('Indexing...', end='')
+    print('\rIndexing...', end='')
     folders = find_folders_with_rjcode_in(dir)
     print('Finished.')
 
