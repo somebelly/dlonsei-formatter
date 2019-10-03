@@ -1,14 +1,12 @@
-import ffmpeg
-import mutagen
+import os, shutil
+import re, json
+import ffmpeg, mutagen
 from mutagen.easyid3 import EasyID3
-import shutil
-import os
-import re
 from requests_html import HTMLSession
 from bs4 import BeautifulSoup
-import json
 from tqdm import tqdm
 from pathvalidate import sanitize_filepath
+from datetime import date
 
 local_data = os.path.expanduser('~/.dlonsei_data.json')
 
@@ -85,6 +83,35 @@ def got_metadata(rjcode):
     return False
 
 
+def get_dl_count(rjcode, current=False):
+    with open(local_data) as f:
+        data = json.load(f)
+    if rjcode not in data:
+        get_metadata(rjcode)
+        with open(local_data) as f:
+            data = json.load(f)
+
+    if (not current) and ('dl_count' in data[rjcode]):
+        return data[rjcode]['dl_count']
+
+    url = f"https://www.dlsite.com/maniax/work/=/product_id/{rjcode}.html"
+
+    try:
+        page = HTMLSession().get(url)
+        page.html.render()
+        dl_count = page.html.find("._dl_count")[0].text
+    except:
+        return ''
+
+    with open(local_data, 'r+') as f:
+        data[rjcode]['dl_count'] = dl_count
+        f.seek(0)
+        json.dump(data, f, indent=4, ensure_ascii=False)
+        f.truncate()
+
+    return dl_count
+
+
 def get_metadata(rjcode):
     with open(local_data) as f:
         data = json.load(f)
@@ -117,7 +144,6 @@ def get_metadata(rjcode):
         class_="slider_item active").select("img")[0].get('src')
 
     with open(local_data, 'r+') as f:
-        data = json.load(f)
         data[rjcode] = metadata
         f.seek(0)
         json.dump(data, f, indent=4, ensure_ascii=False)
