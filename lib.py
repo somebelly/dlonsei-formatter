@@ -9,6 +9,7 @@ from pathvalidate import sanitize_filepath
 from datetime import date
 
 local_data = os.path.expanduser('~/.dlonsei_data.json')
+session = HTMLSession()
 
 tags = {
     'Organization': 'maker_name',
@@ -84,6 +85,8 @@ def got_metadata(rjcode):
 
 
 def get_dl_count(rjcode, current=False):
+    global session
+
     with open(local_data) as f:
         data = json.load(f)
     if rjcode not in data:
@@ -97,9 +100,12 @@ def get_dl_count(rjcode, current=False):
     url = f"https://www.dlsite.com/maniax/work/=/product_id/{rjcode}.html"
 
     try:
-        page = HTMLSession().get(url)
+        page = session.get(url)
         page.html.render()
         dl_count = page.html.find("._dl_count")[0].text
+        # Prevent connection closed error.
+        session.close()
+        session = HTMLSession()
     except:
         return ''
 
@@ -122,7 +128,7 @@ def get_metadata(rjcode):
     url = f"https://www.dlsite.com/maniax/work/=/product_id/{rjcode}.html"
 
     try:
-        page = HTMLSession().get(url)
+        page = session.get(url)
         soup = BeautifulSoup(page.content, "html.parser")
     except:
         return {}
@@ -188,7 +194,7 @@ def has_cover(folder):
 def get_cover(rjcode):
     metadata = get_metadata(rjcode)
     try:
-        return HTMLSession().get(metadata['img']).content
+        return session.get(metadata['img']).content
     except:
         return b''
 
