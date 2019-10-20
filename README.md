@@ -1,3 +1,7 @@
+# dlonsei-player
+Use `mpv` to play some folders with RJcode in your local library.
+
+
 # dlonsei-formatter
 Format a folder with RJcode:
 - Convert `'.wav'` files to `'.flac'`;
@@ -20,29 +24,49 @@ Format a folder with RJcode:
 
 [pathvalidate](https://github.com/thombashi/pathvalidate)
 
+[natsort](https://github.com/SethMMorton/natsort)
+
 ```
-pip install tqdm ffmpeg-python mutagen requests-html beautifulsoup4 pathvalidate
+pip install tqdm ffmpeg-python mutagen requests-html beautifulsoup4 pathvalidate natsort
 ```
+
+Note that `ffmpeg` and `mpv` should be available from the command line.
 
 
 ## Usage
 
-Add to path (change `dlft` to whatever you like):
+Add to path (change `dlft` and `dlp` to whatever you like):
 ```
 git clone https://github.com/somebelly/dlonsei-formatter.git
 cd dlonsei-formatter
 chmod +x dlonsei-formatter.py
+chmod +x dlonsei-player.py
 ln -s dlonsei-formatter.py <Somewhere in PATH/dlft>
+ln -s dlonsei-player.py <Somewhere in PATH/dlp>
 ```
 
 In a directory containing folders with RJcode:
 ```
 dlft
 ```
-or indicate some folders on your own:
+
+Play some random folders:
 ```
-dlft -i <folder1 folder2 ...>
+dlp
 ```
+or with some keywords:
+```
+dlp keyword1 keyword2 ...
+```
+E.g. (depending on your local library):
+```
+dlp 2017 癒し みもりあいの
+```
+will play
+```
+['RJ196614']
+```
+
 
 
 ## References

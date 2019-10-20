@@ -6,10 +6,17 @@ from requests_html import HTMLSession
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 from pathvalidate import sanitize_filepath
-from datetime import date
 
 local_data = os.path.expanduser('~/.dlonsei_data.json')
 session = HTMLSession()
+
+if not os.path.exists(local_data):
+    with open(local_data, 'w+') as f:
+        f.write("{}")
+with open(local_data, 'r+') as f:
+    data = json.load(f)
+    if 'library_dir' not in data:
+        data['library_dir'] = os.getcwd()
 
 tags = {
     'Organization': 'maker_name',
@@ -48,10 +55,20 @@ def opposite_of(bracket):
     return brackets[index - 1]
 
 
-def init():
-    if not os.path.exists(local_data):
-        with open(local_data, 'w+') as f:
-            f.write("{}")
+def get_path_of(rjcode):
+    return sanitize_filepath(
+        os.path.join(data['library_dir'], get_formatted_name_of(rjcode)))
+
+
+def save_to_local():
+    with open(local_data, 'r+') as f:
+        f.seek(0)
+        json.dump(data, f, indent=4, ensure_ascii=False)
+        f.truncate()
+
+
+def exist_in_library(rjcode):
+    return os.path.exists(get_path_of(rjcode))
 
 
 def get_rjcode(str):
@@ -77,22 +94,14 @@ def acflac(file, compression_level=5, replace=True):
 
 
 def got_metadata(rjcode):
-    with open(local_data) as f:
-        data = json.load(f)
-    if rjcode in data:
-        return True
-    return False
+    return (rjcode in data)
 
 
 def get_dl_count(rjcode, current=False):
     global session
 
-    with open(local_data) as f:
-        data = json.load(f)
     if rjcode not in data:
         get_metadata(rjcode)
-        with open(local_data) as f:
-            data = json.load(f)
 
     if (not current) and ('dl_count' in data[rjcode]):
         return data[rjcode]['dl_count']
@@ -109,18 +118,12 @@ def get_dl_count(rjcode, current=False):
     except:
         return ''
 
-    with open(local_data, 'r+') as f:
-        data[rjcode]['dl_count'] = dl_count
-        f.seek(0)
-        json.dump(data, f, indent=4, ensure_ascii=False)
-        f.truncate()
+    data[rjcode]['dl_count'] = dl_count
 
     return dl_count
 
 
 def get_metadata(rjcode):
-    with open(local_data) as f:
-        data = json.load(f)
     if rjcode in data:
         return data[rjcode]
 
@@ -149,11 +152,7 @@ def get_metadata(rjcode):
     metadata['img'] = 'https:' + soup.find(
         class_="slider_item active").select("img")[0].get('src')
 
-    with open(local_data, 'r+') as f:
-        data[rjcode] = metadata
-        f.seek(0)
-        json.dump(data, f, indent=4, ensure_ascii=False)
-        f.truncate()
+    data[rjcode] = metadata
 
     return metadata
 
@@ -182,10 +181,12 @@ def tag(file):
     audio.save()
 
 
-def has_cover(folder):
+def has_cover(folder, exts=['.jpg', '.webp']):
+    paths = [os.path.join(folder, 'cover' + ext) for ext in exts]
     try:
-        if os.path.exists(os.path.join(folder, 'cover.jpg')):
-            return True
+        for path in paths:
+            if os.path.exists(path):
+                return True
     except:
         pass
     return False
@@ -203,6 +204,8 @@ def cover(folder, img=b''):
     if not has_cover(folder):
         if not img:
             img = get_cover(get_rjcode(folder))
+            if not img:
+                return
         open(os.path.join(folder, 'cover.jpg'), 'wb').write(img)
 
 
