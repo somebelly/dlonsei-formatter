@@ -78,6 +78,17 @@ def get_rjcode(str):
         return ''
 
 
+def get_audio_info(file):
+    try:
+        data = mutagen.File(file)
+        sample_rate = data.info.sample_rate
+        bitrate = data.info.bitrate
+        return (sample_rate, bitrate)
+    except Exception as e:
+        print(e)
+        return ()
+
+
 def acflac(file, compression_level=5, replace=True):
     try:
         ffmpeg.input(file).output('.Noname.flac',
@@ -89,6 +100,26 @@ def acflac(file, compression_level=5, replace=True):
         # while os.path.exists(title + '.flac'):
         #     title += '_flac'
         shutil.move('.Noname.flac', sanitize_filepath(title + '.flac'))
+    except Exception as e:
+        print(e)
+
+
+def acwebm(file, bit_rate=320, replace=True):
+    try:
+        sample_rate, rate_old = get_audio_info(file)
+        if rate_old > bit_rate * 1e3:
+            ba = str(bit_rate) + 'k'
+        else:
+            ba = str(int(rate_old / 1e3)) + 'k'
+        ffmpeg.input(file).output('.Noname.webm',
+                                  loglevel="quiet",
+                                  audio_bitrate=ba).run()
+        title = os.path.splitext(file)[0]
+        if replace:
+            os.remove(file)
+        # while os.path.exists(title + '.webm'):
+        #     title += '_webm'
+        shutil.move('.Noname.webm', sanitize_filepath(title + '.webm'))
     except Exception as e:
         print(e)
 
@@ -281,7 +312,12 @@ def get_formatted_name_of(rjcode,
     return temp.strip()
 
 
-def format(dir=os.getcwd(), convert=True, save_cover=True, force=False):
+def format(dir=os.getcwd(),
+           convert=True,
+           save_cover=True,
+           force=False,
+           tag_files=True,
+           lossy=False):
     print('\rIndexing...', end='')
     folders = find_folders_with_rjcode_in(dir)
     print('Finished.')
@@ -295,16 +331,23 @@ def format(dir=os.getcwd(), convert=True, save_cover=True, force=False):
         bar.set_description(rjcode)
 
         if convert:
-            to_convert = find_audio_files_in(folder, exts=['.wav'])
+            if lossy:
+                to_convert = find_audio_files_in(
+                    folder, exts=['.wav', '.aif', '.flac'])
+            else:
+                to_convert = find_audio_files_in(folder, exts=['.wav', '.aif'])
             now = 0
             for f in to_convert:
                 bar.set_postfix_str('Converting...' + str(now) + '/' +
                                     str(len(to_convert)))
-                acflac(f)
+                if lossy:
+                    acwebm(f)
+                else:
+                    acflac(f)
                 now += 1
 
         if force or not got_metadata(rjcode):
-            if get_metadata(rjcode):
+            if get_metadata(rjcode) and tag_files:
                 to_tag = find_audio_files_in(folder)
                 now = 0
                 for f in to_tag:

@@ -26,6 +26,17 @@ def parse_cli():
         #     choices=range(13),
         # )
         parser.add_argument(
+            '-nt',
+            '--not_tag_files',
+            dest='tag_files',
+            action='store_false',
+        )
+        parser.add_argument(
+            '--lossy',
+            dest='lossy',
+            action='store_true',
+        )
+        parser.add_argument(
             '-nc',
             '--not_convert',
             dest='convert',
@@ -38,6 +49,8 @@ def parse_cli():
             action='store_false',
         )
         parser.set_defaults(force=False)
+        parser.set_defaults(tag_files=True)
+        parser.set_defaults(lossy=False)
         parser.set_defaults(convert=True)
         parser.set_defaults(save_cover=True)
         # parser.set_defaults(level=5)
@@ -58,5 +71,9 @@ args = parse_cli()
 # else:
 #     format(force=args.force, convert=args.convert, save_cover=args.save_cover)
 
-format(force=args.force, convert=args.convert, save_cover=args.save_cover)
+format(force=args.force,
+       tag_files=args.tag_files,
+       lossy=args.lossy,
+       convert=args.convert,
+       save_cover=args.save_cover)
 save_to_local()

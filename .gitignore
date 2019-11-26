@@ -58,3 +58,5 @@ target/
 
 # Others
 test.py
+.directory
+log
