@@ -29,7 +29,7 @@ def parse_cli():
         sys.exit(2)
 
 
-def find_audio_files(dir=os.getcwd(), exts=['.mp3', '.flac']):
+def find_audio_files(dir=os.getcwd(), exts=['.mp3', '.flac', '.mp4', '.webm']):
     return natsorted([
         "'" + os.path.join(root, file) + "'" for ext in exts
         for root, dirs, files in os.walk(dir) for file in files

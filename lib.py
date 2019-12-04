@@ -89,11 +89,23 @@ def get_audio_info(file):
         return ()
 
 
+def ffmpeg_run(input, output, in_options={}, out_options={}, run_options={}):
+    if 'loglevel' not in out_options:
+        out_options['loglevel'] = 'warning'
+    if 'map_metadata' not in out_options:
+        out_options['map_metadata'] = -1
+    if 'overwrite_output' not in run_options:
+        run_options['overwrite_output'] = True
+    audio = ffmpeg.input(input, **in_options).audio
+    # print(ffmpeg.output(audio, output, **out_options).compile())
+    ffmpeg.output(audio, output, **out_options).run(**run_options)
+
+
 def acflac(file, compression_level=5, replace=True):
+    out_options = {'compression_level': compression_level}
+
     try:
-        ffmpeg.input(file).output('.Noname.flac',
-                                  loglevel="quiet",
-                                  compression_level=compression_level).run()
+        ffmpeg_run(file, '.Noname.flac', out_options=out_options)
         title = os.path.splitext(file)[0]
         if replace:
             os.remove(file)
@@ -104,24 +116,40 @@ def acflac(file, compression_level=5, replace=True):
         print(e)
 
 
-def acwebm(file, bit_rate=320, replace=True):
+def a2webm(file, bit_rate='320k', replace=True):
+    out_options = {'audio_bitrate': bit_rate}
+    if file.lower().endswith('.webm'):
+        out_options = {'c': 'copy'}
+
+    ffmpeg_run(file, '.Noname.webm', out_options=out_options)
+    title = os.path.splitext(file)[0]
+    if replace:
+        os.remove(file)
+    # while os.path.exists(title + '.webm'):
+    #     title += '_webm'
+    shutil.move('.Noname.webm', sanitize_filepath(title + '.webm'))
+
+
+def acwebm(file, bit_rate='320k', replace=True):
     try:
-        sample_rate, rate_old = get_audio_info(file)
-        if rate_old > bit_rate * 1e3:
-            ba = str(bit_rate) + 'k'
-        else:
-            ba = str(int(rate_old / 1e3)) + 'k'
-        ffmpeg.input(file).output('.Noname.webm',
-                                  loglevel="quiet",
-                                  audio_bitrate=ba).run()
-        title = os.path.splitext(file)[0]
-        if replace:
-            os.remove(file)
-        # while os.path.exists(title + '.webm'):
-        #     title += '_webm'
-        shutil.move('.Noname.webm', sanitize_filepath(title + '.webm'))
-    except Exception as e:
-        print(e)
+        a2webm(file, bit_rate=bit_rate, replace=replace)
+    except:
+        try:
+            a2webm(file, bit_rate='256k', replace=replace)
+        except Exception as e:
+            print(e)
+
+
+def remove_metadata(file, replace=True):
+    ext = os.path.splitext(file)[1]
+    new = f'.Noname{ext}'
+    ffmpeg_run(file, new, out_options={'c': 'copy'})
+    # title = os.path.splitext(file)[0]
+    if replace:
+        os.remove(file)
+    # while os.path.exists(title + '.webm'):
+    #     title += '_webm'
+    shutil.move(new, sanitize_filepath(file))
 
 
 def got_metadata(rjcode):
@@ -312,12 +340,7 @@ def get_formatted_name_of(rjcode,
     return temp.strip()
 
 
-def format(dir=os.getcwd(),
-           convert=True,
-           save_cover=True,
-           force=False,
-           tag_files=True,
-           lossy=False):
+def format(dir=os.getcwd(), **kwargs):
     print('\rIndexing...', end='')
     folders = find_folders_with_rjcode_in(dir)
     print('Finished.')
@@ -330,24 +353,35 @@ def format(dir=os.getcwd(),
         rjcode = get_rjcode(folder)
         bar.set_description(rjcode)
 
-        if convert:
-            if lossy:
-                to_convert = find_audio_files_in(
-                    folder, exts=['.wav', '.aif', '.flac'])
+        if kwargs['convert']:
+            if kwargs['lossy']:
+                exts_to_convert = ['.wav', '.aif', '.flac']
             else:
-                to_convert = find_audio_files_in(folder, exts=['.wav', '.aif'])
+                exts_to_convert = ['.wav', '.aif']
+
+            to_convert = find_audio_files_in(folder, exts=exts_to_convert)
             now = 0
             for f in to_convert:
                 bar.set_postfix_str('Converting...' + str(now) + '/' +
                                     str(len(to_convert)))
-                if lossy:
+                if kwargs['lossy']:
                     acwebm(f)
                 else:
                     acflac(f)
                 now += 1
 
-        if force or not got_metadata(rjcode):
-            if get_metadata(rjcode) and tag_files:
+        if not kwargs['metadata']:
+            exts_to_convert = ['.mp3']
+            to_convert = find_audio_files_in(folder, exts=exts_to_convert)
+            for f in to_convert:
+                bar.set_postfix_str('Removing metadata...' + str(now) + '/' +
+                                    str(len(to_convert)))
+                remove_metadata(f)
+                now += 1
+
+        if kwargs['force'] or not got_metadata(rjcode):
+            if get_metadata(
+                    rjcode) and kwargs['tag_files'] and not kwargs['lossy']:
                 to_tag = find_audio_files_in(folder)
                 now = 0
                 for f in to_tag:
@@ -356,7 +390,7 @@ def format(dir=os.getcwd(),
                     tag(f)
                     now += 1
 
-        if save_cover:
+        if kwargs['save_cover']:
             to_cover = find_folders_with_audio_files_in(folder)
             img = get_cover(rjcode)
             # now = 0
@@ -366,9 +400,11 @@ def format(dir=os.getcwd(),
                 cover(f, img)
                 # now += 1
 
-        folder_name = get_formatted_name_of(rjcode)
+        # folder_name = get_formatted_name_of(rjcode)
         shutil.move(
             folder,
-            sanitize_filepath(
-                os.path.join(os.path.split(folder)[0], folder_name)))
+            get_path_of(rjcode)
+            # sanitize_filepath(
+            #     os.path.join(os.path.split(folder)[0], folder_name)),
+        )
         bar.set_postfix_str('Finished.')

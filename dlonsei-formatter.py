@@ -18,6 +18,12 @@ def parse_cli():
             dest='force',
             action='store_true',
         )
+        parser.add_argument(
+            '-nr',
+            '--not_remove_metadata',
+            dest='metadata',
+            action='store_true',
+        )
         # parser.add_argument(
         #     "-cl",
         #     '--compression_level',
@@ -48,11 +54,13 @@ def parse_cli():
             dest='save_cover',
             action='store_false',
         )
+
         parser.set_defaults(force=False)
         parser.set_defaults(tag_files=True)
         parser.set_defaults(lossy=False)
         parser.set_defaults(convert=True)
         parser.set_defaults(save_cover=True)
+        parser.set_defaults(metadata=False)
         # parser.set_defaults(level=5)
         return parser.parse_args()
     except argparse.ArgumentError as err:
@@ -71,9 +79,11 @@ args = parse_cli()
 # else:
 #     format(force=args.force, convert=args.convert, save_cover=args.save_cover)
 
-format(force=args.force,
-       tag_files=args.tag_files,
-       lossy=args.lossy,
-       convert=args.convert,
-       save_cover=args.save_cover)
+# format(force=args.force,
+#        tag_files=args.tag_files,
+#        lossy=args.lossy,
+#        convert=args.convert,
+#        save_cover=args.save_cover)
+
+format(**vars(args))
 save_to_local()
