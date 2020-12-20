@@ -1,6 +1,8 @@
 import os, shutil
 import re, json
 import ffmpeg, mutagen
+from time import localtime
+from datetime import date
 from mutagen.easyid3 import EasyID3
 from requests_html import HTMLSession
 from bs4 import BeautifulSoup
@@ -55,9 +57,26 @@ def opposite_of(bracket):
     return brackets[index - 1]
 
 
-def get_path_of(rjcode):
-    return sanitize_filepath(
-        os.path.join(data['library_dir'], get_formatted_name_of(rjcode)))
+def get_path_of(rjcode, folder=None):
+    if folder is not None:
+        y, m = localtime(os.path.getmtime(folder))[:2]
+    else:
+        y = date.today().year
+        m = date.today().month
+    yy = str(y)
+    if m < 10:
+        mm = "0" + str(m)
+    else:
+        mm = str(m)
+    _date = yy + mm
+
+    _path = os.path.join(data['library_dir'], _date)
+
+    # _path = os.path.join(_path, rjcode)
+    # return sanitize_filepath(os.path.join(data['library_dir'],
+    #                                       get_formatted_name_of(rjcode)),
+    #                          platform="auto")
+    return os.path.join(_path, rjcode)
 
 
 def save_to_local():
@@ -111,7 +130,8 @@ def acflac(file, compression_level=5, replace=True):
             os.remove(file)
         # while os.path.exists(title + '.flac'):
         #     title += '_flac'
-        shutil.move('.Noname.flac', sanitize_filepath(title + '.flac'))
+        shutil.move('.Noname.flac',
+                    sanitize_filepath(title + '.flac', platform="auto"))
     except Exception as e:
         print(e)
 
@@ -127,7 +147,8 @@ def a2webm(file, bit_rate='320k', replace=True):
         os.remove(file)
     # while os.path.exists(title + '.webm'):
     #     title += '_webm'
-    shutil.move('.Noname.webm', sanitize_filepath(title + '.webm'))
+    shutil.move('.Noname.webm',
+                sanitize_filepath(title + '.webm', platform="auto"))
 
 
 def acwebm(file, bit_rate='320k', replace=True):
@@ -149,7 +170,7 @@ def remove_metadata(file, replace=True):
         os.remove(file)
     # while os.path.exists(title + '.webm'):
     #     title += '_webm'
-    shutil.move(new, sanitize_filepath(file))
+    shutil.move(new, sanitize_filepath(file, platform="auto"))
 
 
 def got_metadata(rjcode):
@@ -193,9 +214,11 @@ def get_metadata(rjcode):
         page = session.get(url)
         soup = BeautifulSoup(page.content, "html.parser")
     except:
+        data[rjcode] = metadata
         return {}
 
     if page.status_code == 404:
+        data[rjcode] = metadata
         return {}
 
     def get_text(html):
@@ -212,7 +235,6 @@ def get_metadata(rjcode):
         class_="slider_item active").select("img")[0].get('src')
 
     data[rjcode] = metadata
-
     return metadata
 
 
@@ -352,6 +374,7 @@ def format(dir=os.getcwd(), **kwargs):
     for folder in bar:
         rjcode = get_rjcode(folder)
         bar.set_description(rjcode)
+        get_metadata(rjcode)
 
         if kwargs['convert']:
             if kwargs['lossy']:
@@ -401,10 +424,16 @@ def format(dir=os.getcwd(), **kwargs):
                 # now += 1
 
         # folder_name = get_formatted_name_of(rjcode)
+        # head, _ = os.path.split(folder)
+        # _new_name = os.path.join(head, rjcode)
+        _new_name = get_path_of(rjcode, folder=folder)
+
+        data[rjcode]['Path'] = _new_name
         shutil.move(
-            folder,
-            get_path_of(rjcode)
+            folder, _new_name
+            # get_path_of(rjcode)
             # sanitize_filepath(
             #     os.path.join(os.path.split(folder)[0], folder_name)),
         )
+        save_to_local()
         bar.set_postfix_str('Finished.')

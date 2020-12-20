@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from lib import format, save_to_local
+from lib import format
 import argparse, sys
 
 
@@ -86,4 +86,3 @@ args = parse_cli()
 #        save_cover=args.save_cover)
 
 format(**vars(args))
-save_to_local()

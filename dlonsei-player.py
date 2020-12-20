@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 
 import os, shlex, subprocess, argparse, sys, random
+import pprint
+from pathlib import Path
 from natsort import natsorted
-from lib import data, get_path_of, exist_in_library
+from lib import data
 
 if len(sys.argv) > 1:
     sys.argv.insert(1, '-k')
+
+pp = pprint.PrettyPrinter(indent=4)
 
 
 def parse_cli():
@@ -22,25 +26,33 @@ def parse_cli():
             type=int,
             choices=range(1, 5),
         )
+        # parser.add_argument(
+        #     "-v",
+        #     '--show_video',
+        #     dest='video',
+        #     action='store_true',
+        # )
         parser.set_defaults(number=2)
+        # parser.set_defaults(video=False)
         return parser.parse_args()
     except argparse.ArgumentError as err:
         print(str(err))
         sys.exit(2)
 
 
-def find_audio_files(dir=os.getcwd(), exts=['.mp3', '.flac', '.mp4', '.webm']):
+def find_audio_files(
+        _dir=os.getcwd(), exts=['.mp3', '.flac', '.mp4', '.m4a', '.webm']):
     return natsorted([
-        "'" + os.path.join(root, file) + "'" for ext in exts
-        for root, dirs, files in os.walk(dir) for file in files
+        '"' + os.path.join(root, file) + '"' for ext in exts
+        for root, dirs, files in os.walk(_dir) for file in files
         if file.lower().endswith(ext)
     ])
 
 
-def find_cover(dir=os.getcwd(), exts=['.jpg', '.webp']):
+def find_cover(_dir=os.getcwd(), exts=['.jpg', '.webp']):
     l = [
         os.path.join(root, file) for ext in exts
-        for root, dirs, files in os.walk(dir) for file in files
+        for root, dirs, files in os.walk(_dir) for file in files
         if file.lower().endswith(ext)
     ]
     if not l:
@@ -59,6 +71,22 @@ def get_rjcode_with(keywords):
     return rjcodes
 
 
+def print_rjcode(_rjcode):
+    print()
+    print('========')
+    print(_rjcode)
+    print('========')
+    _path = data[_rjcode]['Path']
+    for k in data[_rjcode].keys():
+        if k not in ['img', 'Path', 'ファイル容量', 'ファイル形式']:
+            print(f'  {k}:  \t{data[_rjcode][k]}')
+    print(Path(_path).as_uri())
+    cover = find_cover(_path)
+    if cover[1:-1]:
+        print(Path(cover[1:-1]).as_uri())
+    print()
+
+
 args = parse_cli()
 
 if not args.keywords:
@@ -71,15 +99,14 @@ else:
         for _ in range(args.number)
     ]
 
-rjcodes_to_play = [
-    rjcode for rjcode in list(dict.fromkeys(rjcodes_to_play))
-    if exist_in_library(rjcode)
-]
-
-print(rjcodes_to_play)
+rjcodes_to_play = [rjcode for rjcode in list(dict.fromkeys(rjcodes_to_play))]
 
 for rjcode in rjcodes_to_play:
-    path = get_path_of(rjcode)
+    print_rjcode(rjcode)
+    path = data[rjcode]['Path']
     playlist = ' '.join(find_audio_files(path))
-    mpv = f'mpv --loop-playlist=no --external-file={find_cover(path)} --force-window --image-display-duration=inf --vid=1 {playlist}'
+    # if args.video:
+    #     mpv = f'mpv --loop-playlist=no --external-file={cover} --force-window --image-display-duration=inf --vid=1 {playlist}'
+    # else:
+    mpv = f'mpv --loop-playlist=no --no-video {playlist}'
     subprocess.call(shlex.split(mpv))
