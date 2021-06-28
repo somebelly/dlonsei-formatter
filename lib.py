@@ -1,8 +1,14 @@
-import os, shutil
-import re, json
-import ffmpeg, mutagen
+# pylint: disable=W0702,W0703
+
+import os
+import shutil
+import re
+import json
 from time import localtime
 from datetime import date
+
+import ffmpeg
+import mutagen
 from mutagen.easyid3 import EasyID3
 from requests_html import HTMLSession
 from bs4 import BeautifulSoup
@@ -57,7 +63,7 @@ def opposite_of(bracket):
     return brackets[index - 1]
 
 
-def get_path_of(rjcode, folder=None):
+def get_relative_path_of(rjcode, folder=None):
     if folder is not None:
         y, m = localtime(os.path.getmtime(folder))[:2]
     else:
@@ -70,54 +76,61 @@ def get_path_of(rjcode, folder=None):
         mm = str(m)
     _date = yy + mm
 
-    _path = os.path.join(data['library_dir'], _date)
+    return os.path.join(_date, rjcode)
 
-    # _path = os.path.join(_path, rjcode)
-    # return sanitize_filepath(os.path.join(data['library_dir'],
-    #                                       get_formatted_name_of(rjcode)),
-    #                          platform="auto")
-    return os.path.join(_path, rjcode)
+
+def get_path_of(rjcode, folder=None):
+    _relative_path = get_relative_path_of(rjcode, folder)
+    return os.path.join(data['library_dir'], _relative_path)
 
 
 def save_to_local():
-    with open(local_data, 'r+') as f:
-        f.seek(0)
-        json.dump(data, f, indent=4, ensure_ascii=False)
-        f.truncate()
+    with open(local_data, 'r+') as _f:
+        _f.seek(0)
+        json.dump(data, _f, indent=4, ensure_ascii=False)
+        _f.truncate()
 
 
 def exist_in_library(rjcode):
     return os.path.exists(get_path_of(rjcode))
 
 
-def get_rjcode(str):
+def get_rjcode(_str):
     try:
-        return re.findall(r"(RJ\d{6})", str)[0]
+        return re.findall(r"(RJ\d{6})", _str)[0]
     except:
         return ''
 
 
 def get_audio_info(file):
     try:
-        data = mutagen.File(file)
-        sample_rate = data.info.sample_rate
-        bitrate = data.info.bitrate
+        _data = mutagen.File(file)
+        sample_rate = _data.info.sample_rate
+        bitrate = _data.info.bitrate
         return (sample_rate, bitrate)
     except Exception as e:
         print(e)
         return ()
 
 
-def ffmpeg_run(input, output, in_options={}, out_options={}, run_options={}):
+def ffmpeg_run(_input,
+               _output,
+               in_options=None,
+               out_options=None,
+               run_options=None):
+    in_options = in_options or {}
+    out_options = out_options or {}
+    run_options = run_options or {}
+
     if 'loglevel' not in out_options:
         out_options['loglevel'] = 'warning'
     if 'map_metadata' not in out_options:
         out_options['map_metadata'] = -1
     if 'overwrite_output' not in run_options:
         run_options['overwrite_output'] = True
-    audio = ffmpeg.input(input, **in_options).audio
+    audio = ffmpeg.input(_input, **in_options).audio
     # print(ffmpeg.output(audio, output, **out_options).compile())
-    ffmpeg.output(audio, output, **out_options).run(**run_options)
+    ffmpeg.output(audio, _output, **out_options).run(**run_options)
 
 
 def acflac(file, compression_level=5, replace=True):
@@ -174,7 +187,7 @@ def remove_metadata(file, replace=True):
 
 
 def got_metadata(rjcode):
-    return (rjcode in data)
+    return rjcode in data
 
 
 def get_dl_count(rjcode, current=False):
@@ -245,16 +258,16 @@ def tag(file):
     if not metadata:
         return
 
-    ext = os.path.splitext(file)[1].lower()
+    # ext = os.path.splitext(file)[1].lower()
     audio = mutagen.File(file, easy=True)
 
     audio.delete()
     if audio.tags is None:
         audio.add_tags()
 
-    for k in tags.keys():
-        if tags[k] in metadata:
-            audio[k] = metadata[tags[k]]
+    for _k in tags:
+        if tags[_k] in metadata:
+            audio[_k] = metadata[tags[_k]]
     audio['Title'] = os.path.split(os.path.splitext(file)[0])[1]
     if tags['Date'] in metadata:
         audio['Year'] = metadata[tags['Date']][:4]
@@ -262,7 +275,8 @@ def tag(file):
     audio.save()
 
 
-def has_cover(folder, exts=['.jpg', '.webp']):
+def has_cover(folder, exts=None):
+    exts = exts or ['.jpg', '.webp']
     paths = [os.path.join(folder, 'cover' + ext) for ext in exts]
     try:
         for path in paths:
@@ -290,35 +304,37 @@ def cover(folder, img=b''):
         open(os.path.join(folder, 'cover.jpg'), 'wb').write(img)
 
 
-def find_audio_files_in(dir, exts=['.mp3', '.flac']):
+def find_audio_files_in(_dir, exts=None):
+    exts = exts or ['.mp3', '.flac']
     return [
         os.path.join(root, file) for ext in exts
-        for root, dirs, files in os.walk(dir) for file in files
+        for root, dirs, files in os.walk(_dir) for file in files
         if file.lower().endswith(ext)
     ]
 
 
-def find_folders_with_rjcode_in(dir):
-    if get_rjcode(dir):
-        return [dir]
+def find_folders_with_rjcode_in(_dir):
+    if get_rjcode(_dir):
+        return [_dir]
     return [
-        os.path.join(root, folder) for root, dirs, files in os.walk(dir)
+        os.path.join(root, folder) for root, dirs, files in os.walk(_dir)
         for folder in dirs if get_rjcode(folder)
     ]
 
 
-def find_folders_with_audio_files_in(dir, exts=['.mp3', '.flac']):
+def find_folders_with_audio_files_in(_dir, exts=None):
+    exts = exts or ['.mp3', '.flac']
     return list(
         dict.fromkeys([
             os.path.split(file)[0]
-            for file in find_audio_files_in(dir, exts=exts)
+            for file in find_audio_files_in(_dir, exts=exts)
         ]))
 
 
 def format_title(title):
     temp = title
-    for str in re.findall(r"(【.*?】)", title):
-        temp = temp.replace(str, '')
+    for _str in re.findall(r"(【.*?】)", title):
+        temp = temp.replace(_str, '')
     if temp[0] in '『「':
         return temp[1:temp.find(opposite_of(temp[0]))].strip()
     if '』' in temp:
@@ -334,37 +350,38 @@ def format_artist(artist):
         temp = temp[:4]
         temp.append('他')
     temp = ' '.join(temp)
-    for str in re.findall(r"(（.*?）)", temp):
-        temp = temp.replace(str, '')
+    for _str in re.findall(r"(（.*?）)", temp):
+        temp = temp.replace(_str, '')
     return temp.strip()
 
 
 def get_formatted_name_of(rjcode,
                           template='{RJcode} [{Circle}] {Title} ({Artist})',
-                          dict={}):
+                          _dict=None):
+    _dict = _dict or {}
     metadata = get_metadata(rjcode)
-    dict['RJcode'] = rjcode
+    _dict['RJcode'] = rjcode
     try:
-        dict['Circle'] = metadata[tags['Organization']]
+        _dict['Circle'] = metadata[tags['Organization']]
     except:
-        dict['Circle'] = ''
+        _dict['Circle'] = ''
     try:
-        dict['Title'] = format_title(metadata[tags['Album']])
+        _dict['Title'] = format_title(metadata[tags['Album']])
     except:
-        dict['Title'] = ''
+        _dict['Title'] = ''
     try:
-        dict['Artist'] = format_artist(metadata[tags['Artist']])
+        _dict['Artist'] = format_artist(metadata[tags['Artist']])
     except:
-        dict['Artist'] = ''
-    temp = template.format_map(dict)
+        _dict['Artist'] = ''
+    temp = template.format_map(_dict)
     temp = temp.replace('()', '')
     temp = temp.replace('[]', '')
     return temp.strip()
 
 
-def format(dir=os.getcwd(), **kwargs):
+def formatter(_dir=os.getcwd(), **kwargs):
     print('\rIndexing...', end='')
-    folders = find_folders_with_rjcode_in(dir)
+    folders = find_folders_with_rjcode_in(_dir)
     print('Finished.')
 
     bar = tqdm(folders,
@@ -384,22 +401,22 @@ def format(dir=os.getcwd(), **kwargs):
 
             to_convert = find_audio_files_in(folder, exts=exts_to_convert)
             now = 0
-            for f in to_convert:
+            for _f in to_convert:
                 bar.set_postfix_str('Converting...' + str(now) + '/' +
                                     str(len(to_convert)))
                 if kwargs['lossy']:
-                    acwebm(f)
+                    acwebm(_f)
                 else:
-                    acflac(f)
+                    acflac(_f)
                 now += 1
 
         if not kwargs['metadata']:
             exts_to_convert = ['.mp3']
             to_convert = find_audio_files_in(folder, exts=exts_to_convert)
-            for f in to_convert:
+            for _f in to_convert:
                 bar.set_postfix_str('Removing metadata...' + str(now) + '/' +
                                     str(len(to_convert)))
-                remove_metadata(f)
+                remove_metadata(_f)
                 now += 1
 
         if kwargs['force'] or not got_metadata(rjcode):
@@ -407,33 +424,41 @@ def format(dir=os.getcwd(), **kwargs):
                     rjcode) and kwargs['tag_files'] and not kwargs['lossy']:
                 to_tag = find_audio_files_in(folder)
                 now = 0
-                for f in to_tag:
+                for _f in to_tag:
                     bar.set_postfix_str('Tagging...' + str(now) + '/' +
                                         str(len(to_tag)))
-                    tag(f)
+                    tag(_f)
                     now += 1
 
         if kwargs['save_cover']:
             to_cover = find_folders_with_audio_files_in(folder)
             img = get_cover(rjcode)
-            # now = 0
-            for f in to_cover:
-                # bar.set_postfix_str('Saving cover...' + str(now) + '/' +
-                #                     str(len(to_cover)))
-                cover(f, img)
-                # now += 1
+            for _f in to_cover:
+                cover(_f, img)
 
-        # folder_name = get_formatted_name_of(rjcode)
-        # head, _ = os.path.split(folder)
-        # _new_name = os.path.join(head, rjcode)
-        _new_name = get_path_of(rjcode, folder=folder)
+        _new_name = get_relative_path_of(rjcode, folder=folder)
 
         data[rjcode]['Path'] = _new_name
-        shutil.move(
-            folder, _new_name
-            # get_path_of(rjcode)
-            # sanitize_filepath(
-            #     os.path.join(os.path.split(folder)[0], folder_name)),
-        )
+        shutil.move(folder, _new_name)
         save_to_local()
         bar.set_postfix_str('Finished.')
+
+
+def scanner(_dir=os.getcwd()):
+    print('\rIndexing...', end='')
+    folders = find_folders_with_rjcode_in(_dir)
+    print('Finished.')
+
+    _bar = tqdm(folders,
+                bar_format='{l_bar}{bar}{{{n_fmt}/{total_fmt}{postfix}}}',
+                dynamic_ncols=True)
+
+    for folder in _bar:
+        rjcode = get_rjcode(folder)
+        _bar.set_description(rjcode)
+        get_metadata(rjcode)
+        data[rjcode]['Path'] = os.path.relpath(folder,
+                                               start=data['library_dir'])
+        _bar.set_postfix_str('Finished.')
+
+    save_to_local()
