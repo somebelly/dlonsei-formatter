@@ -17,8 +17,8 @@ with open(local_data, 'r+') as _f:
     assert 'library_dir' in data
 
     to_del = [
-        _k for _k in data
-        if 'Path' in data[_k] and not os.path.exists(data[_k]['Path'])
+        _k for _k in data if 'Path' in data[_k] and
+        not os.path.exists(os.path.join(data['library_dir'], data[_k]['Path']))
     ]
     for _k in to_del:
         del data[_k]
@@ -119,7 +119,8 @@ for rjcode in rjcodes_to_play:
     print_rjcode(rjcode)
     if rjcode not in data:
         continue
-    path = data[rjcode]['Path']
+    # path = data[rjcode]['Path']
+    path = os.path.join(data['library_dir'], data[rjcode]['Path'])
     if not os.path.exists(path):
         continue
     playlist = ' '.join(find_audio_files(path))
