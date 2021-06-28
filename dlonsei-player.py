@@ -1,12 +1,32 @@
 #!/usr/bin/env python3
 
-import os, shlex, subprocess, argparse, sys, random
+import os
+import shlex
+import subprocess
+import argparse
+import sys
+import random
 import pprint
+import json
 from pathlib import Path
 from natsort import natsorted
-from lib import data
+from lib import local_data
 
-if len(sys.argv) > 1:
+with open(local_data, 'r+') as _f:
+    data = json.load(_f)
+    assert 'library_dir' in data
+
+    to_del = [
+        _k for _k in data
+        if 'Path' in data[_k] and not os.path.exists(data[_k]['Path'])
+    ]
+    for _k in to_del:
+        del data[_k]
+    _f.seek(0)
+    json.dump(data, _f, indent=4, ensure_ascii=False)
+    _f.truncate()
+
+if len(sys.argv) > 1 and '-n' not in sys.argv and '--number' not in sys.argv:
     sys.argv.insert(1, '-k')
 
 pp = pprint.PrettyPrinter(indent=4)
@@ -24,24 +44,18 @@ def parse_cli():
             "-n",
             '--number',
             type=int,
-            choices=range(1, 5),
+            choices=range(1, 13),
         )
-        # parser.add_argument(
-        #     "-v",
-        #     '--show_video',
-        #     dest='video',
-        #     action='store_true',
-        # )
-        parser.set_defaults(number=2)
-        # parser.set_defaults(video=False)
+        parser.set_defaults(number=5)
         return parser.parse_args()
     except argparse.ArgumentError as err:
         print(str(err))
         sys.exit(2)
 
 
-def find_audio_files(
-        _dir=os.getcwd(), exts=['.mp3', '.flac', '.mp4', '.m4a', '.webm']):
+def find_audio_files(_dir=os.getcwd(), exts=None):
+    if exts is None:
+        exts = ['.mp3', '.mp4', '.webm', '.flac']
     return natsorted([
         '"' + os.path.join(root, file) + '"' for ext in exts
         for root, dirs, files in os.walk(_dir) for file in files
@@ -49,7 +63,9 @@ def find_audio_files(
     ])
 
 
-def find_cover(_dir=os.getcwd(), exts=['.jpg', '.webp']):
+def find_cover(_dir=os.getcwd(), exts=None):
+    if exts is None:
+        exts = ['.jpg', '.webp', '.png']
     l = [
         os.path.join(root, file) for ext in exts
         for root, dirs, files in os.walk(_dir) for file in files
@@ -99,14 +115,13 @@ else:
         for _ in range(args.number)
     ]
 
-rjcodes_to_play = [rjcode for rjcode in list(dict.fromkeys(rjcodes_to_play))]
-
 for rjcode in rjcodes_to_play:
     print_rjcode(rjcode)
+    if rjcode not in data:
+        continue
     path = data[rjcode]['Path']
+    if not os.path.exists(path):
+        continue
     playlist = ' '.join(find_audio_files(path))
-    # if args.video:
-    #     mpv = f'mpv --loop-playlist=no --external-file={cover} --force-window --image-display-duration=inf --vid=1 {playlist}'
-    # else:
     mpv = f'mpv --loop-playlist=no --no-video {playlist}'
     subprocess.call(shlex.split(mpv))
