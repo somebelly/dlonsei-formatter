@@ -92,7 +92,8 @@ def print_rjcode(_rjcode):
     print('========')
     print(_rjcode)
     print('========')
-    _path = data[_rjcode]['Path']
+    # _path = data[_rjcode]['Path']
+    _path = os.path.join(data['library_dir'], data[_rjcode]['Path'])
     for k in data[_rjcode].keys():
         if k not in ['img', 'Path', 'ファイル容量', 'ファイル形式']:
             print(f'  {k}:  \t{data[_rjcode][k]}')
